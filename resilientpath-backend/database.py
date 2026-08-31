@@ -11,7 +11,10 @@ except (ImportError, AttributeError):
 
 # We default to SQLite for the PoC. In production, this would be:
 # postgresql://user:password@localhost:5432/ndma_disasterlens
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./disasterlens.db")
+if os.environ.get("VERCEL"):
+    DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:////tmp/disasterlens.db")
+else:
+    DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./disasterlens.db")
 
 # For SQLite to support spatial queries, it needs the mod_spatialite extension.
 # We configure SQLAlchemy to load it if we are using SQLite.

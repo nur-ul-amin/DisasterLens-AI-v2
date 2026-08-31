@@ -1,0 +1,14 @@
+{
+  "builds": [
+    {
+      "src": "resilientpath-backend/main.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "resilientpath-backend/main.py"
+    }
+  ]
+}
