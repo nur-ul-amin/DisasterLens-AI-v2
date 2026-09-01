@@ -10,3 +10,4 @@ feedparser
 python-dateutil
 pandas
 pyarrow
+psycopg2-binary
