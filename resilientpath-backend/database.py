@@ -9,34 +9,34 @@ try:
 except (ImportError, AttributeError):
     pass
 
-# We default to SQLite for the PoC. In production, this would be:
-# postgresql://user:password@localhost:5432/ndma_disasterlens
-if os.environ.get("VERCEL"):
-    DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:////tmp/disasterlens.db")
-else:
-    DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./disasterlens.db")
+# Get DATABASE_URL from environment variables (Default to local SQLite if missing)
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./disasterlens.db")
 
-# For SQLite to support spatial queries, it needs the mod_spatialite extension.
-# We configure SQLAlchemy to load it if we are using SQLite.
-connect_args = {}
+# Fix for Heroku/Supabase legacy "postgres://" URLs (SQLAlchemy 1.4+ requires "postgresql://")
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+# Configure database engine arguments
+engine_kwargs = {}
+
 if DATABASE_URL.startswith("sqlite"):
-    connect_args["check_same_thread"] = False
+    engine_kwargs["connect_args"] = {"check_same_thread": False}
+elif DATABASE_URL.startswith("postgresql"):
+    # Disable prepared statements for Supabase PgBouncer/Transaction Pooler (Port 6543)
+    engine_kwargs["prepared_statement_cache_size"] = 0
 
-engine = create_engine(DATABASE_URL, connect_args=connect_args)
+engine = create_engine(DATABASE_URL, **engine_kwargs)
 
-# Attempt to load SpatiaLite extension if using SQLite
+# Attempt to load SpatiaLite extension if using SQLite locally
 if DATABASE_URL.startswith("sqlite"):
     from sqlalchemy import event
     @event.listens_for(engine, "connect")
     def load_spatialite(dbapi_conn, connection_record):
         try:
             dbapi_conn.enable_load_extension(True)
-            # Standard paths for mod_spatialite on various OS
             dbapi_conn.execute('SELECT load_extension("mod_spatialite")')
             dbapi_conn.execute('SELECT InitSpatialMetaData(1);')
         except Exception as e:
-            # If mod_spatialite is not installed on the host machine, we catch the error.
-            # For a production PostGIS setup, this block is bypassed.
             print(f"[Warning] Could not load mod_spatialite: {e}")
             pass
 
@@ -51,11 +51,8 @@ class Incident(Base):
     raw_text = Column(String, nullable=True)
     
     # Standard spatial geometry column (Point, WGS84)
-    # Using String for PoC to avoid Windows mod_spatialite dependency issues.
-    # In production with PostGIS, change back to: Column(Geometry(geometry_type='POINT', srid=4326))
     geom = Column(String)
     
-    # We also store raw lat/lon for easy JSON serialization without WKB parsing overhead
     latitude = Column(Float)
     longitude = Column(Float)
     
@@ -90,13 +87,6 @@ class Incident(Base):
             }
         }
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
 class AggregatedEvent(Base):
     """
     Persistent log of all fetched and clustered events for historical export.
@@ -113,9 +103,15 @@ class AggregatedEvent(Base):
     trust_score = Column(Float)
     trust_label = Column(String)
     published_at = Column(DateTime(timezone=True))
-    fetched_date = Column(DateTime(timezone=True), index=True) # Used for filtering "today"
-    source_refs_json = Column(String) # JSON string of list of sources
-    
-# Create tables
-Base.metadata.create_all(bind=engine)
+    fetched_date = Column(DateTime(timezone=True), index=True)
+    source_refs_json = Column(String)
 
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+# Create tables in PostgreSQL/SQLite
+Base.metadata.create_all(bind=engine)
