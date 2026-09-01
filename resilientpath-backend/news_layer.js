@@ -22,10 +22,10 @@
 
 // ─── Configuration ────────────────────────────────────────────────────────────
 const NEWS_CONFIG = {
-    API_BASE: 'http://localhost:8000',
-    MAP_LAYERS_URL: 'http://localhost:8000/api/v1/news/map-layers',
-    FEED_URL: 'http://localhost:8000/api/v1/news/feed',
-    STATUS_URL: 'http://localhost:8000/api/v1/news/status',
+    API_BASE: '',
+    MAP_LAYERS_URL: '/api/v1/news/map-layers',
+    FEED_URL: '/api/v1/news/feed',
+    STATUS_URL: '/api/v1/news/status',
     POLL_INTERVAL_MS: 15000,
     MAP_CENTER: [30.3753, 69.3451],  // Pakistan centroid
     MAP_ZOOM: 5,

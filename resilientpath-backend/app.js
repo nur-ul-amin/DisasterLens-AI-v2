@@ -29,7 +29,7 @@
 // ─── CONFIGURATION ─────────────────────────────────────────────────────────
 const CONFIG = {
   // Phase 2: Replace with actual FastAPI endpoint
-  API_BASE_URL: 'http://localhost:8000/api/v1/reports/submit',
+  API_BASE_URL: '/api/v1/reports/submit',
 
   // Default map center: Islamabad, Pakistan
   MAP_CENTER: [33.6844, 73.0479],
